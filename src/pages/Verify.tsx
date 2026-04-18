@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, ShieldAlert, Building2, Sparkles, Download, ArrowLeft, Hash } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Building2, Sparkles, Download, ArrowLeft, Hash, History } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -14,12 +14,14 @@ import { SiteFooter } from "@/components/SiteFooter";
 type Student = { id: string; name: string; trade: string; institution_id: string };
 type Inst = { id: string; name: string; location: string | null };
 type Cred = { id: string; level: number; status: string; hash: string; created_at: string; skills: { name: string } | null };
+type Log = { id: string; action: string; timestamp: string; credential_id: string };
 
 const Verify = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const [student, setStudent] = useState<Student | null>(null);
   const [institution, setInstitution] = useState<Inst | null>(null);
   const [creds, setCreds] = useState<Cred[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [summary, setSummary] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -38,6 +40,13 @@ const Verify = () => {
       if (cancel) return;
       setStudent(s as Student); setInstitution(inst as Inst); setCreds((c ?? []) as Cred[]);
       setLoading(false);
+
+      // Credential history (non-blocking)
+      const credIds = (c ?? []).map((x: any) => x.id);
+      if (credIds.length) {
+        supabase.from("credential_logs").select("id,action,timestamp,credential_id").in("credential_id", credIds).order("timestamp", { ascending: false })
+          .then(({ data }) => { if (!cancel) setLogs((data ?? []) as Log[]); });
+      }
 
       // Async AI summary (non-blocking)
       const skills = (c ?? []).map((x: any) => ({ name: x.skills?.name ?? "Skill", level: x.level, status: x.status }));
@@ -250,6 +259,27 @@ const Verify = () => {
               ))}
             </div>}
         </div>
+
+        {/* Credential history timeline */}
+        {logs.length > 0 && (
+          <div className="bg-card border border-border rounded-lg overflow-hidden mt-6">
+            <div className="p-4 border-b border-border font-semibold bg-surface-1 flex items-center gap-2">
+              <History className="size-4" /> Credential History
+            </div>
+            <div className="divide-y divide-border">
+              {logs.map(l => (
+                <div key={l.id} className="p-3 px-4 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className={`size-2 rounded-full ${l.action.includes("revok") ? "bg-destructive" : "bg-success"}`} />
+                    <span className="capitalize font-medium">{l.action.replace(/_/g, " ")}</span>
+                    <span className="text-xs text-muted-foreground font-mono">#{l.credential_id.slice(0, 8)}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{new Date(l.timestamp).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground text-center mt-8">Verified by Credify · No login required · Public verification page</p>
       </main>
