@@ -1,0 +1,10 @@
+{
+  "student_batches": 6,
+  "cred_batches": 20,
+  "totals": {
+    "institutions": 50,
+    "students": 8959,
+    "skills": 25,
+    "credentials": 50000
+  }
+}
