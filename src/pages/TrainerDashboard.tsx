@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, WifiOff, RefreshCw, Users, BadgeCheck, Award, Inbox, Trophy, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Plus, WifiOff, RefreshCw, Users, BadgeCheck, Award, Inbox, CheckCircle2, XCircle, ExternalLink, Settings as SettingsIcon } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppShell } from "@/components/AppShell";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sha256, levelLabel, statusBadgeClass, statusLabel, getOfflineQueue, addToOfflineQueue, removeFromQueue, type OfflineCredential } from "@/lib/credify";
 import { EmptyState } from "@/components/EmptyState";
 import { Leaderboard } from "@/components/Leaderboard";
+import { SettingsPanel } from "@/components/SettingsPanel";
 
 type Student = { id: string; name: string; trade: string; user_id: string | null };
 type Skill = { id: string; name: string };
@@ -36,8 +37,10 @@ const TrainerDashboard = () => {
   const [queue, setQueue] = useState<OfflineCredential[]>(getOfflineQueue());
   const [offline, setOffline] = useState(!navigator.onLine);
 
-  const [sName, setSName] = useState(""); const [sTrade, setSTrade] = useState("");
+  const [sName, setSName] = useState(""); const [sTrade, setSTrade] = useState(""); const [sEmail, setSEmail] = useState("");
   const [openAdd, setOpenAdd] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") ?? "students";
 
   useEffect(() => {
     const on = () => setOffline(false), off = () => setOffline(true);
@@ -69,7 +72,21 @@ const TrainerDashboard = () => {
     if (!profile?.institution_id) return;
     const { error } = await supabase.from("students").insert({ name: sName, trade: sTrade, institution_id: profile.institution_id });
     if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
-    toast({ title: "Student added" }); setSName(""); setSTrade(""); setOpenAdd(false); load();
+    if (sEmail.trim()) {
+      const { error: wlErr } = await supabase.from("whitelist").insert({
+        email: sEmail.toLowerCase().trim(),
+        role: "student" as any,
+        institution_id: profile.institution_id,
+      });
+      if (wlErr && !/duplicate|unique/i.test(wlErr.message)) {
+        toast({ title: "Student added, email whitelist failed", description: wlErr.message, variant: "destructive" });
+      } else {
+        toast({ title: "Student added", description: `${sEmail} can now register & auto-link.` });
+      }
+    } else {
+      toast({ title: "Student added" });
+    }
+    setSName(""); setSTrade(""); setSEmail(""); setOpenAdd(false); load();
   };
 
   const approveRequest = async (req: Req) => {
@@ -134,7 +151,7 @@ const TrainerDashboard = () => {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">Trainer Console</div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {profile?.name?.split(" ")[0] ?? "Trainer"}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back, {profile?.name?.split(" ")[0] ?? "Trainer"}</h1>
           <p className="text-sm text-muted-foreground mt-1">Review student requests, manage your trainees and track verified credentials.</p>
         </div>
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
@@ -144,7 +161,12 @@ const TrainerDashboard = () => {
             <form onSubmit={addStudent} className="space-y-4">
               <div><Label>Name</Label><Input required value={sName} onChange={e => setSName(e.target.value)} /></div>
               <div><Label>Trade</Label><Input required placeholder="e.g. Fitter, Electrician" value={sTrade} onChange={e => setSTrade(e.target.value)} /></div>
-              <Button className="w-full">Add</Button>
+              <div>
+                <Label>Email <span className="text-muted-foreground font-normal">(optional, for self-registration)</span></Label>
+                <Input type="email" placeholder="student@example.com" value={sEmail} onChange={e => setSEmail(e.target.value)} />
+                <p className="text-[11px] text-muted-foreground mt-1">If provided, the student can sign up with this email and auto-link to this record.</p>
+              </div>
+              <Button className="w-full">Add student</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -164,20 +186,21 @@ const TrainerDashboard = () => {
         </motion.div>
       )}
 
-      <div className="grid sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Stat icon={Users} label="Students" value={students.length} />
-        <Stat icon={Inbox} label="Pending requests" value={pendingForTrainer.length} highlight={pendingForTrainer.length > 0} />
-        <Stat icon={Award} label="Verified credentials" value={validCreds.length} />
-        <Stat icon={BadgeCheck} label="Re-assessment" value={pendingReass.length} highlight={pendingReass.length > 0} />
+        <Stat icon={Inbox} label="Pending" value={pendingForTrainer.length} highlight={pendingForTrainer.length > 0} />
+        <Stat icon={Award} label="Verified" value={validCreds.length} />
+        <Stat icon={BadgeCheck} label="Re-assess" value={pendingReass.length} highlight={pendingReass.length > 0} />
       </div>
 
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
-          <TabsTrigger value="requests">Issue Requests ({pendingForTrainer.length})</TabsTrigger>
+          <TabsTrigger value="requests">Requests ({pendingForTrainer.length})</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="reass">Re-assessment ({pendingReass.length})</TabsTrigger>
+          <TabsTrigger value="reass">Re-assess ({pendingReass.length})</TabsTrigger>
           <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+          <TabsTrigger value="settings"><SettingsIcon className="size-3.5 mr-1" />Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="students">
@@ -256,6 +279,10 @@ const TrainerDashboard = () => {
 
         <TabsContent value="leaderboard">
           <Leaderboard institutionId={profile?.institution_id} />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <SettingsPanel />
         </TabsContent>
       </Tabs>
     </AppShell>
