@@ -14,6 +14,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 type Student = { id: string; name: string; trade: string; institution_id: string };
 type Inst = { id: string; name: string; location: string | null };
 type Cred = { id: string; level: number; status: string; hash: string; created_at: string; skills: { name: string } | null };
+type Log = { id: string; action: string; timestamp: string; credential_id: string };
 
 const Verify = () => {
   const { studentId } = useParams<{ studentId: string }>();
