@@ -9,7 +9,7 @@ export const AppShell = ({ children, nav }: { children: ReactNode; nav?: { to: s
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const roleLabel = profile?.role === "iti_admin" ? "ITI Admin" : profile?.role === "principal" ? "Principal" : profile?.role === "trainer" ? "Trainer" : "";
+  const roleLabel = profile?.role === "iti_admin" ? "ITI Admin" : profile?.role === "principal" ? "Principal" : profile?.role === "trainer" ? "Trainer" : profile?.role === "student" ? "Student" : "";
 
   return (
     <div className="min-h-screen bg-surface-1">
