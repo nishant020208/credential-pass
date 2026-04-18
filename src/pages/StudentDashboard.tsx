@@ -124,14 +124,14 @@ const StudentDashboard = () => {
     <AppShell>
       {/* Hero — verified candidate card */}
       <div className="bg-card border border-border rounded-lg overflow-hidden mb-6">
-        <div className="p-6 grid lg:grid-cols-[1fr_220px] gap-6 items-center">
+        <div className="p-4 sm:p-6 grid lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 items-center">
           <div className="flex items-start gap-5">
             <div className="size-20 rounded-full bg-gradient-to-br from-primary to-primary/70 grid place-items-center text-2xl font-bold text-primary-foreground shrink-0">
               {student.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
             </div>
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Skill Passport Holder</div>
-              <h1 className="text-2xl font-bold tracking-tight mt-0.5">{student.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5 truncate">{student.name}</h1>
               <div className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                 <Award className="size-3.5" /> {student.trade}
               </div>

@@ -96,14 +96,14 @@ const PrincipalDashboard = () => {
     <AppShell>
       <div className="mb-6">
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">Principal Console</div>
-        <h1 className="text-3xl font-bold tracking-tight">Hello {profile?.name?.split(" ")[0] ?? "Principal"} — your institution at a glance</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Hello {profile?.name?.split(" ")[0] ?? "Principal"} — your institution at a glance</h1>
         <p className="text-sm text-muted-foreground mt-1">Final approval gate. Every credential you sign carries your institution's name into the public registry.</p>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-3 mb-6">
-        <Stat icon={Inbox} label="Awaiting your approval" value={pending.length} highlight={pending.length > 0} />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <Stat icon={Inbox} label="Awaiting approval" value={pending.length} highlight={pending.length > 0} />
         <Stat icon={BadgeCheck} label="Verified" value={approved.length} />
-        <Stat icon={ShieldX} label="Rejected / Revoked" value={rejected.length} />
+        <Stat icon={ShieldX} label="Rejected" value={rejected.length} />
         <Stat icon={TrendingUp} label="Trust score" value={trustScore} suffix="%" success />
       </div>
 

@@ -151,7 +151,7 @@ const TrainerDashboard = () => {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">Trainer Console</div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {profile?.name?.split(" ")[0] ?? "Trainer"}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back, {profile?.name?.split(" ")[0] ?? "Trainer"}</h1>
           <p className="text-sm text-muted-foreground mt-1">Review student requests, manage your trainees and track verified credentials.</p>
         </div>
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
@@ -186,11 +186,11 @@ const TrainerDashboard = () => {
         </motion.div>
       )}
 
-      <div className="grid sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Stat icon={Users} label="Students" value={students.length} />
-        <Stat icon={Inbox} label="Pending requests" value={pendingForTrainer.length} highlight={pendingForTrainer.length > 0} />
-        <Stat icon={Award} label="Verified credentials" value={validCreds.length} />
-        <Stat icon={BadgeCheck} label="Re-assessment" value={pendingReass.length} highlight={pendingReass.length > 0} />
+        <Stat icon={Inbox} label="Pending" value={pendingForTrainer.length} highlight={pendingForTrainer.length > 0} />
+        <Stat icon={Award} label="Verified" value={validCreds.length} />
+        <Stat icon={BadgeCheck} label="Re-assess" value={pendingReass.length} highlight={pendingReass.length > 0} />
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })} className="w-full">

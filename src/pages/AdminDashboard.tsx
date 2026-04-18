@@ -94,11 +94,11 @@ const AdminDashboard = () => {
     <AppShell>
       <div className="mb-6">
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">ITI Admin Console</div>
-        <h1 className="text-3xl font-bold tracking-tight">National oversight</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">National oversight</h1>
         <p className="text-sm text-muted-foreground mt-1">Onboard institutions, whitelist users, and watch the registry's health.</p>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Stat icon={Building2} label="Institutions" value={insts.length} />
         <Stat icon={Users} label="Students" value={studentCount} />
         <Stat icon={Award} label="Credentials" value={creds.length} />
