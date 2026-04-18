@@ -1,129 +1,94 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, ShieldAlert, Building2, Sparkles, Download, ArrowLeft, Hash, History } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Building2, Sparkles, Download, ArrowLeft, Hash, History, Clock, Eye } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { levelLabel, levelColor } from "@/lib/credify";
+import { levelLabel, levelColor, statusBadgeClass, statusLabel, computeSkillScore, scoreTier } from "@/lib/credify";
 import { SiteFooter } from "@/components/SiteFooter";
 
 type Student = { id: string; name: string; trade: string; institution_id: string };
 type Inst = { id: string; name: string; location: string | null };
 type Cred = { id: string; level: number; status: string; hash: string; created_at: string; skills: { name: string } | null };
-type Log = { id: string; action: string; timestamp: string; credential_id: string };
+type Scan = { id: string; scanned_at: string };
 
 const Verify = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const [student, setStudent] = useState<Student | null>(null);
   const [institution, setInstitution] = useState<Inst | null>(null);
   const [creds, setCreds] = useState<Cred[]>([]);
-  const [logs, setLogs] = useState<Log[]>([]);
   const [summary, setSummary] = useState<string>("");
+  const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [verifyMs, setVerifyMs] = useState<number | null>(null);
+  const startedRef = useRef<number>(performance.now());
 
   useEffect(() => {
     if (!studentId) return;
     let cancel = false;
+    startedRef.current = performance.now();
     (async () => {
       setLoading(true);
       const { data: s } = await supabase.from("students").select("id,name,trade,institution_id").eq("id", studentId).maybeSingle();
       if (!s) { setNotFound(true); setLoading(false); return; }
-      const [{ data: inst }, { data: c }] = await Promise.all([
+      const [{ data: inst }, { data: c }, { data: sc }] = await Promise.all([
         supabase.from("institutions").select("*").eq("id", s.institution_id).maybeSingle(),
         supabase.from("credentials").select("id,level,status,hash,created_at,skills(name)").eq("student_id", studentId).order("created_at", { ascending: false }),
+        supabase.from("scan_logs").select("id,scanned_at").eq("student_id", studentId).order("scanned_at", { ascending: false }).limit(5),
       ]);
       if (cancel) return;
       setStudent(s as Student); setInstitution(inst as Inst); setCreds((c ?? []) as Cred[]);
+      setScans((sc ?? []) as Scan[]);
+      setVerifyMs(performance.now() - startedRef.current);
       setLoading(false);
 
-      // Credential history (non-blocking)
-      const credIds = (c ?? []).map((x: any) => x.id);
-      if (credIds.length) {
-        supabase.from("credential_logs").select("id,action,timestamp,credential_id").in("credential_id", credIds).order("timestamp", { ascending: false })
-          .then(({ data }) => { if (!cancel) setLogs((data ?? []) as Log[]); });
-      }
+      // Log this scan (fire & forget)
+      supabase.from("scan_logs").insert({ student_id: studentId, user_agent: navigator.userAgent.slice(0, 200) });
 
-      // Async AI summary (non-blocking)
-      const skills = (c ?? []).map((x: any) => ({ name: x.skills?.name ?? "Skill", level: x.level, status: x.status }));
-      supabase.functions.invoke("skill-summary", { body: { studentName: s.name, trade: s.trade, skills } })
+      // AI summary (non-blocking)
+      const skillsList = (c ?? []).map((x: any) => ({ name: x.skills?.name ?? "Skill", level: x.level, status: x.status }));
+      supabase.functions.invoke("skill-summary", { body: { studentName: s.name, trade: s.trade, skills: skillsList } })
         .then(({ data }) => { if (!cancel && data?.summary) setSummary(data.summary); })
         .catch(() => {});
     })();
     return () => { cancel = true; };
   }, [studentId]);
 
-  // Trust score for the institution
-  const trustScore = useMemo(() => {
-    if (creds.length === 0) return 100;
-    return Math.round((creds.filter(c => c.status === "valid").length / creds.length) * 100);
-  }, [creds]);
-
-  const validCount = creds.filter(c => c.status === "valid").length;
-  const allRevoked = creds.length > 0 && validCount === 0;
-  const overallValid = validCount > 0;
+  const validCreds = creds.filter(c => c.status === "valid");
+  const allRevoked = creds.length > 0 && validCreds.length === 0 && creds.every(c => c.status === "revoked" || c.status === "rejected");
+  const overallValid = validCreds.length > 0;
+  const score = useMemo(() => computeSkillScore(creds), [creds]);
+  const tier = scoreTier(score);
+  const trustScore = creds.length === 0 ? 100 : Math.round((validCreds.length / creds.length) * 100);
+  const lastScan = scans[1]; // skip current scan we just inserted; show prior
 
   const downloadPDF = () => {
     if (!student || !institution) return;
     const doc = new jsPDF();
     const pageW = 210;
-
-    // Tricolour accent strip (saffron / white / green)
     doc.setFillColor(255, 153, 51); doc.rect(0, 0, pageW, 2, "F");
     doc.setFillColor(255, 255, 255); doc.rect(0, 2, pageW, 2, "F");
     doc.setFillColor(19, 136, 8); doc.rect(0, 4, pageW, 2, "F");
+    doc.setFillColor(30, 58, 138); doc.rect(0, 6, pageW, 34, "F");
 
-    // Deep blue header band (#1E3A8A)
-    doc.setFillColor(30, 58, 138);
-    doc.rect(0, 6, pageW, 34, "F");
-
-    // Logo block (white square with shield)
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(14, 14, 18, 18, 2, 2, "F");
-    doc.setDrawColor(30, 58, 138);
-    doc.setLineWidth(0.6);
-    // Simple shield outline
-    doc.setFillColor(30, 58, 138);
-    doc.triangle(23, 18, 19, 21, 19, 26, "F");
-    doc.triangle(23, 18, 27, 21, 27, 26, "F");
-    doc.triangle(19, 26, 27, 26, 23, 30, "F");
-
-    // Header text
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20).setFont("helvetica", "bold").text("CREDIFY", 38, 22);
-    doc.setFontSize(9).setFont("helvetica", "normal").text("Verifiable Micro-Skill Passport", 38, 28);
-    doc.setFontSize(8).text("Government of India · Skill Initiative", 38, 33);
+    doc.setFontSize(18).setFont("helvetica", "bold").text("NATIONAL SKILL REGISTRY", 14, 22);
+    doc.setFontSize(9).setFont("helvetica", "normal").text("Ministry of Skill Development & Entrepreneurship · Government of India", 14, 28);
+    doc.setFontSize(8).text("Verifiable Micro-Skill Passport", 14, 33);
 
-    // Right-side: certificate label
-    doc.setFontSize(8).setFont("helvetica", "normal");
-    doc.text("CERTIFICATE OF SKILL VERIFICATION", pageW - 14, 22, { align: "right" });
+    doc.setFontSize(8).text("CERTIFICATE OF SKILL VERIFICATION", pageW - 14, 22, { align: "right" });
     doc.setFontSize(7);
     doc.text(`Issued: ${new Date().toLocaleDateString("en-IN")}`, pageW - 14, 28, { align: "right" });
     doc.text(`Ref: ${student.id.slice(0, 8).toUpperCase()}`, pageW - 14, 33, { align: "right" });
 
-    // Watermark seal (large faint circle behind content)
-    doc.setDrawColor(30, 58, 138);
-    doc.setLineWidth(0.4);
-    doc.setFillColor(243, 244, 246);
-    doc.circle(pageW / 2, 170, 45, "FD");
-    doc.setTextColor(200, 210, 225);
-    doc.setFontSize(36).setFont("helvetica", "bold");
-    doc.text("CREDIFY", pageW / 2, 168, { align: "center" });
-    doc.setFontSize(9).setFont("helvetica", "normal");
-    doc.text("OFFICIAL · GOVT. OF INDIA", pageW / 2, 178, { align: "center" });
-
-    // Holder details
     doc.setTextColor(20, 20, 30);
     doc.setFontSize(10).setFont("helvetica", "bold").text("CREDENTIAL HOLDER", 14, 56);
-    doc.setDrawColor(30, 58, 138); doc.setLineWidth(0.4);
-    doc.line(14, 58, 60, 58);
-
-    doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(30, 58, 138);
-    doc.text(student.name, 14, 67);
+    doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(30, 58, 138).text(student.name, 14, 67);
     doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(60, 60, 70);
     doc.text(`Trade: ${student.trade}`, 14, 74);
     doc.text(`Institution: ${institution.name}${institution.location ? `, ${institution.location}` : ""}`, 14, 80);
@@ -133,23 +98,20 @@ const Verify = () => {
     autoTable(doc, {
       startY: 94,
       head: [["Skill", "Level", "Status", "Credential Hash"]],
-      body: creds.map(c => [c.skills?.name ?? "—", `L${c.level} ${levelLabel(c.level)}`, c.status.toUpperCase(), c.hash.slice(0, 24) + "…"]),
+      body: validCreds.map(c => [c.skills?.name ?? "—", `L${c.level} ${levelLabel(c.level)}`, "VERIFIED", c.hash.slice(0, 24) + "…"]),
       theme: "grid",
       headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: "bold", fontSize: 9 },
       bodyStyles: { fontSize: 9, textColor: [40, 40, 50] },
       alternateRowStyles: { fillColor: [248, 249, 251] },
-      styles: { lineColor: [220, 224, 232], lineWidth: 0.2, cellPadding: 3 },
     });
 
-    // Footer tricolour strip
     doc.setFillColor(255, 153, 51); doc.rect(0, 287, pageW, 2, "F");
     doc.setFillColor(255, 255, 255); doc.rect(0, 289, pageW, 2, "F");
     doc.setFillColor(19, 136, 8); doc.rect(0, 291, pageW, 2, "F");
+    doc.setFontSize(8).setTextColor(110, 110, 125);
+    doc.text("Sealed with SHA-256. Verifiable in real-time via the QR code on the public registry.", pageW / 2, 281, { align: "center" });
 
-    doc.setFontSize(8).setTextColor(110, 110, 125).setFont("helvetica", "normal");
-    doc.text("This certificate is sealed with SHA-256 and verifiable in real-time via the QR code on the public verification page.", pageW / 2, 281, { align: "center" });
-
-    doc.save(`NATIONAL SKILL REGISTRY-${student.name.replace(/\s+/g, "_")}.pdf`);
+    doc.save(`NSR-${student.name.replace(/\s+/g, "_")}.pdf`);
   };
 
   if (loading) {
@@ -182,43 +144,77 @@ const Verify = () => {
       <div className="gov-strip" />
       <header className="border-b border-border bg-card">
         <div className="container py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-3">
             <div className="size-9 rounded-md bg-primary grid place-items-center"><ShieldCheck className="size-5 text-primary-foreground" /></div>
             <div className="leading-tight">
-              <div className="font-semibold">NATIONAL SKILL REGISTRY</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Govt. Skill Passport</div>
+              <div className="font-bold text-sm">NATIONAL SKILL REGISTRY</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Govt. of India · Public verification</div>
             </div>
           </Link>
           <Button onClick={downloadPDF} variant="outline" size="sm"><Download className="size-4 mr-1" />Download Certificate</Button>
         </div>
       </header>
 
-      <main className="container py-8 max-w-5xl">
-        {/* Verification banner */}
-        <div className={`bg-card border-2 rounded-lg p-6 mb-6 flex items-center gap-4 ${overallValid ? "border-success" : "border-destructive"}`}>
-          <div className={`size-14 rounded-md grid place-items-center ${overallValid ? "bg-success" : "bg-destructive"}`}>
-            {overallValid ? <ShieldCheck className="size-7 text-success-foreground" /> : <ShieldAlert className="size-7 text-destructive-foreground" />}
-          </div>
-          <div className="flex-1">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Verification Result</div>
-            <div className={`text-2xl font-bold mt-0.5 ${overallValid ? "text-success" : "text-destructive"}`}>
-              {overallValid ? "VERIFIED" : allRevoked ? "REVOKED" : "NO CREDENTIALS"}
+      <main className="container py-6 max-w-5xl">
+        {/* HUGE one-tap verification banner */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className={`rounded-lg border-2 p-6 mb-6 flex items-center gap-5 relative overflow-hidden ${
+            overallValid ? "border-success bg-success/5" : "border-destructive bg-destructive/5"
+          }`}
+        >
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: [0, 0.25, 0] }}
+            transition={{ duration: 1.4, ease: "easeOut" }}
+            className={`absolute inset-0 ${overallValid ? "bg-success" : "bg-destructive"}`}
+          />
+          <motion.div
+            initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 200, damping: 14 }}
+            className={`size-20 rounded-full grid place-items-center shrink-0 z-10 ${overallValid ? "bg-success" : "bg-destructive"}`}
+          >
+            {overallValid ? <ShieldCheck className="size-10 text-success-foreground" /> : <ShieldAlert className="size-10 text-destructive-foreground" />}
+          </motion.div>
+          <div className="z-10 flex-1">
+            <div className={`text-4xl md:text-5xl font-black tracking-tight leading-none ${overallValid ? "text-success" : "text-destructive"}`}>
+              {overallValid ? "✅ VERIFIED" : allRevoked ? "❌ REVOKED" : "⚠️ NO CREDENTIALS"}
             </div>
-            <div className="text-sm text-muted-foreground mt-1">{validCount} valid · {creds.length - validCount} revoked · sealed by SHA-256</div>
+            <div className="text-sm text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="flex items-center gap-1"><Clock className="size-3.5" />Verified in {verifyMs ? (verifyMs / 1000).toFixed(1) : "—"}s</span>
+              <span>·</span>
+              <span>{validCreds.length} valid · {creds.length - validCreds.length} other</span>
+              <span>·</span>
+              <span>SHA-256 sealed</span>
+              {lastScan && <><span>·</span><span className="flex items-center gap-1"><Eye className="size-3.5" />Last verified {timeAgo(lastScan.scanned_at)}</span></>}
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid lg:grid-cols-[1fr_280px] gap-6 mb-6">
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Skill Passport Holder</div>
             <h1 className="text-2xl font-bold tracking-tight">{student.name}</h1>
             <div className="text-sm text-muted-foreground mt-1">Trade: <span className="text-foreground font-medium">{student.trade}</span></div>
-            <div className="flex items-center gap-2 mt-4 text-sm">
+            <div className="flex items-center gap-2 mt-3 text-sm">
               <Building2 className="size-4 text-muted-foreground" />
               <span>{institution?.name}{institution?.location ? `, ${institution.location}` : ""}</span>
             </div>
 
-            <div className="mt-6 p-4 rounded-md bg-surface-1 border border-border">
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <div className="p-3 rounded-md bg-surface-1 border border-border">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Skill Score</div>
+                <div className={`text-2xl font-bold ${tier.color}`}>{score}<span className="text-sm text-muted-foreground">/100</span></div>
+                <div className="text-xs text-muted-foreground mt-0.5">{tier.label}</div>
+              </div>
+              <div className="p-3 rounded-md bg-surface-1 border border-border">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Trust Score</div>
+                <div className="text-2xl font-bold text-success">{trustScore}%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Institution</div>
+              </div>
+            </div>
+
+            <div className="mt-5 p-4 rounded-md bg-surface-1 border border-border">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold mb-2">
                 <Sparkles className="size-3.5" />Skill Summary
               </div>
@@ -226,66 +222,56 @@ const Verify = () => {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6 flex flex-col items-center justify-center">
+          <div className="bg-card border border-border rounded-lg p-5 flex flex-col items-center justify-center">
             <div className="bg-white p-3 rounded-md border border-border">
-              <QRCodeSVG value={`${window.location.origin}/verify/${student.id}`} size={180} />
+              <QRCodeSVG value={`${window.location.origin}/verify/${student.id}`} size={170} />
             </div>
             <div className="text-xs text-muted-foreground mt-3 text-center">Scan to re-verify</div>
-            <div className="mt-4 w-full pt-4 border-t border-border text-center">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Institution Trust Score</div>
-              <div className="text-2xl font-bold text-success mt-1">{trustScore}%</div>
-            </div>
+            {scans.length > 0 && (
+              <div className="mt-4 w-full pt-4 border-t border-border">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Recent scans</div>
+                <div className="space-y-1.5 text-xs">
+                  {scans.slice(0, 4).map(s => <div key={s.id} className="flex items-center gap-1.5 text-muted-foreground"><Eye className="size-3" />{timeAgo(s.scanned_at)}</div>)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-border font-semibold bg-surface-1">Verified Skills ({creds.length})</div>
-          {creds.length === 0 ? <div className="p-12 text-center text-muted-foreground">No credentials issued.</div> :
-            <div className="divide-y divide-border">
-              {creds.map(c => (
-                <div key={c.id} className="p-4 flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <div className="font-semibold">{c.skills?.name}</div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono mt-1">
-                      <Hash className="size-3" />{c.hash.slice(0, 32)}…
+          <div className="p-4 border-b border-border font-semibold bg-surface-1">Skills ({creds.length})</div>
+          {creds.length === 0
+            ? <div className="p-12 text-center text-muted-foreground">No credentials issued yet.</div>
+            : <div className="divide-y divide-border">
+                {creds.map(c => (
+                  <div key={c.id} className="p-4 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <div className="font-semibold">{c.skills?.name}</div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono mt-1"><Hash className="size-3" />{c.hash.slice(0, 32)}…</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Issued {new Date(c.created_at).toLocaleDateString()}</div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Issued {new Date(c.created_at).toLocaleDateString()}</div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={levelColor(c.level)}>L{c.level} · {levelLabel(c.level)}</Badge>
+                      <Badge className={statusBadgeClass(c.status)}>{statusLabel(c.status)}</Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={levelColor(c.level)}>L{c.level} · {levelLabel(c.level)}</Badge>
-                    {c.status === "valid" ? <Badge className="verify-badge">Valid</Badge> : <Badge variant="destructive">Revoked</Badge>}
-                  </div>
-                </div>
-              ))}
-            </div>}
+                ))}
+              </div>}
         </div>
 
-        {/* Credential history timeline */}
-        {logs.length > 0 && (
-          <div className="bg-card border border-border rounded-lg overflow-hidden mt-6">
-            <div className="p-4 border-b border-border font-semibold bg-surface-1 flex items-center gap-2">
-              <History className="size-4" /> Credential History
-            </div>
-            <div className="divide-y divide-border">
-              {logs.map(l => (
-                <div key={l.id} className="p-3 px-4 flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <div className={`size-2 rounded-full ${l.action.includes("revok") ? "bg-destructive" : "bg-success"}`} />
-                    <span className="capitalize font-medium">{l.action.replace(/_/g, " ")}</span>
-                    <span className="text-xs text-muted-foreground font-mono">#{l.credential_id.slice(0, 8)}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{new Date(l.timestamp).toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <p className="text-xs text-muted-foreground text-center mt-8">Verified by NATIONAL SKILL REGISTRY · No login required · Public verification page</p>
+        <p className="text-xs text-muted-foreground text-center mt-8">Public verification page · No login required · Powered by NATIONAL SKILL REGISTRY</p>
       </main>
       <SiteFooter />
     </div>
   );
 };
+
+function timeAgo(iso: string): string {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return `${Math.round(s)}s ago`;
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+}
 
 export default Verify;
