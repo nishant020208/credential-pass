@@ -193,13 +193,14 @@ const TrainerDashboard = () => {
         <Stat icon={BadgeCheck} label="Re-assessment" value={pendingReass.length} highlight={pendingReass.length > 0} />
       </div>
 
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
-          <TabsTrigger value="requests">Issue Requests ({pendingForTrainer.length})</TabsTrigger>
+          <TabsTrigger value="requests">Requests ({pendingForTrainer.length})</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="reass">Re-assessment ({pendingReass.length})</TabsTrigger>
+          <TabsTrigger value="reass">Re-assess ({pendingReass.length})</TabsTrigger>
           <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+          <TabsTrigger value="settings"><SettingsIcon className="size-3.5 mr-1" />Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="students">
@@ -278,6 +279,10 @@ const TrainerDashboard = () => {
 
         <TabsContent value="leaderboard">
           <Leaderboard institutionId={profile?.institution_id} />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <SettingsPanel />
         </TabsContent>
       </Tabs>
     </AppShell>
