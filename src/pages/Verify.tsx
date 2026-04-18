@@ -260,6 +260,27 @@ const Verify = () => {
             </div>}
         </div>
 
+        {/* Credential history timeline */}
+        {logs.length > 0 && (
+          <div className="bg-card border border-border rounded-lg overflow-hidden mt-6">
+            <div className="p-4 border-b border-border font-semibold bg-surface-1 flex items-center gap-2">
+              <History className="size-4" /> Credential History
+            </div>
+            <div className="divide-y divide-border">
+              {logs.map(l => (
+                <div key={l.id} className="p-3 px-4 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className={`size-2 rounded-full ${l.action.includes("revok") ? "bg-destructive" : "bg-success"}`} />
+                    <span className="capitalize font-medium">{l.action.replace(/_/g, " ")}</span>
+                    <span className="text-xs text-muted-foreground font-mono">#{l.credential_id.slice(0, 8)}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{new Date(l.timestamp).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground text-center mt-8">Verified by Credify · No login required · Public verification page</p>
       </main>
       <SiteFooter />
