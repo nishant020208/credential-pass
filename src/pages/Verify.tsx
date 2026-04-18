@@ -21,6 +21,7 @@ const Verify = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [institution, setInstitution] = useState<Inst | null>(null);
   const [creds, setCreds] = useState<Cred[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [summary, setSummary] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -39,6 +40,13 @@ const Verify = () => {
       if (cancel) return;
       setStudent(s as Student); setInstitution(inst as Inst); setCreds((c ?? []) as Cred[]);
       setLoading(false);
+
+      // Credential history (non-blocking)
+      const credIds = (c ?? []).map((x: any) => x.id);
+      if (credIds.length) {
+        supabase.from("credential_logs").select("id,action,timestamp,credential_id").in("credential_id", credIds).order("timestamp", { ascending: false })
+          .then(({ data }) => { if (!cancel) setLogs((data ?? []) as Log[]); });
+      }
 
       // Async AI summary (non-blocking)
       const skills = (c ?? []).map((x: any) => ({ name: x.skills?.name ?? "Skill", level: x.level, status: x.status }));
