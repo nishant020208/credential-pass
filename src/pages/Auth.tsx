@@ -1,0 +1,84 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+
+const Auth = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) { toast({ title: "Sign in failed", description: error.message, variant: "destructive" }); return; }
+    navigate("/dashboard");
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard`, data: { name } },
+    });
+    setLoading(false);
+    if (error) {
+      const msg = error.message.includes("whitelisted") ? "This email is not authorized. Please contact your ITI admin." : error.message;
+      toast({ title: "Sign up failed", description: msg, variant: "destructive" }); return;
+    }
+    toast({ title: "Welcome to Credify", description: "Account created successfully." });
+    navigate("/dashboard");
+  };
+
+  return (
+    <div className="min-h-screen grid place-items-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="size-12 rounded-2xl bg-gradient-primary grid place-items-center mx-auto shadow-glow mb-4">
+            <ShieldCheck className="size-6 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold">Credify</h1>
+          <p className="text-sm text-muted-foreground">Whitelisted access only</p>
+        </div>
+
+        <div className="glass-card p-6">
+          <Tabs defaultValue="signin">
+            <TabsList className="grid grid-cols-2 mb-6">
+              <TabsTrigger value="signin">Sign in</TabsTrigger>
+              <TabsTrigger value="signup">Sign up</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="signin">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div><Label>Email</Label><Input type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div><Label>Password</Label><Input type="password" required value={password} onChange={e => setPassword(e.target.value)} /></div>
+                <Button className="w-full bg-gradient-primary" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div><Label>Full name</Label><Input required value={name} onChange={e => setName(e.target.value)} /></div>
+                <div><Label>Whitelisted email</Label><Input type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div><Label>Password</Label><Input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} /></div>
+                <Button className="w-full bg-gradient-primary" disabled={loading}>{loading ? "Creating…" : "Create account"}</Button>
+                <p className="text-xs text-muted-foreground text-center">Role is auto-assigned from the whitelist.</p>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Auth;
