@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { levelLabel, levelColor } from "@/lib/credify";
+import { SiteFooter } from "@/components/SiteFooter";
 
 type Student = { id: string; name: string; trade: string; institution_id: string };
 type Inst = { id: string; name: string; location: string | null };
