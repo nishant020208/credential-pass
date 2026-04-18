@@ -52,7 +52,7 @@ const EmployerSearch = () => {
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `credify-shortlist-${Date.now()}.csv`;
+    a.download = `nsr-shortlist-${Date.now()}.csv`;
     a.click();
   };
 
