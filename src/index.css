@@ -1,97 +1,98 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Credify Design System — GovTech + FinTech, dark, premium. All colors HSL. */
+/* Credify Design System — DigiLocker-style government portal. Light, formal, trustworthy. All colors HSL. */
 
 @layer base {
   :root {
-    /* Surface scale */
-    --background: 225 14% 12%;        /* #1A1C23 */
-    --surface-1: 225 14% 15%;
-    --surface-2: 225 13% 18%;
-    --surface-3: 225 12% 22%;
-    --foreground: 210 20% 96%;
+    /* Surface scale — light, official */
+    --background: 0 0% 100%;              /* #FFFFFF */
+    --surface-1: 220 14% 96%;             /* #F3F4F6 light grey */
+    --surface-2: 220 13% 91%;
+    --surface-3: 220 13% 86%;
+    --foreground: 222 47% 11%;            /* near-black text */
 
-    --card: 225 14% 15%;
-    --card-foreground: 210 20% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 225 14% 15%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Brand */
-    --primary: 211 54% 36%;            /* #2A5C8D */
-    --primary-foreground: 210 40% 98%;
-    --primary-glow: 211 70% 55%;
+    /* Brand — Deep Blue (DigiLocker-style) */
+    --primary: 224 76% 33%;               /* #1E3A8A */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 224 76% 33%;          /* same — no glow tint */
 
-    --secondary: 225 12% 22%;
-    --secondary-foreground: 210 20% 96%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 225 12% 20%;
-    --muted-foreground: 220 9% 65%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 40%;
 
-    --accent: 225 12% 22%;
-    --accent-foreground: 210 20% 96%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
 
     /* Semantic */
-    --success: 159 84% 39%;            /* #10B981 verified */
+    --success: 142 71% 36%;               /* #16A34A verified */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 8%;
-    --destructive: 0 72% 51%;
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 45%;             /* #DC2626 revoked */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 12% 22%;
-    --input: 225 12% 20%;
-    --ring: 211 70% 55%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 224 76% 33%;
 
-    --radius: 0.875rem;
+    --radius: 0.5rem;
 
-    /* Effects */
-    --gradient-hero: radial-gradient(at 30% 20%, hsl(211 70% 28% / 0.45), transparent 55%),
-                     radial-gradient(at 80% 0%, hsl(159 60% 30% / 0.25), transparent 50%);
-    --gradient-card: linear-gradient(135deg, hsl(225 14% 17%) 0%, hsl(225 14% 14%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(211 54% 36%), hsl(211 70% 55%));
-    --shadow-elegant: 0 20px 60px -20px hsl(211 70% 10% / 0.6);
-    --shadow-glow: 0 0 40px hsl(211 70% 55% / 0.25);
+    /* Effects — subtle, official */
+    --gradient-hero: none;
+    --gradient-card: none;
+    --gradient-primary: hsl(224 76% 33%);
+    --shadow-elegant: 0 1px 3px 0 hsl(220 13% 50% / 0.08), 0 1px 2px -1px hsl(220 13% 50% / 0.06);
+    --shadow-glow: 0 1px 2px 0 hsl(220 13% 50% / 0.05);
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  html { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  html { font-family: 'Inter', system-ui, sans-serif; }
   body {
-    @apply bg-background text-foreground antialiased;
-    background-image: var(--gradient-hero);
-    background-attachment: fixed;
-    font-feature-settings: "ss01", "cv11";
+    @apply bg-surface-1 text-foreground antialiased;
+    font-feature-settings: "cv11";
   }
-  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .font-mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
 }
 
 @layer components {
   .glass-card {
-    background: var(--gradient-card);
-    @apply border border-border/60 rounded-2xl;
+    @apply bg-card border border-border rounded-lg;
     box-shadow: var(--shadow-elegant);
   }
   .skill-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium;
   }
   .verify-badge {
-    background: linear-gradient(135deg, hsl(var(--success) / 0.18), hsl(var(--success) / 0.05));
-    @apply border border-success/40 text-success;
+    @apply bg-success text-success-foreground border border-success/40 font-medium;
   }
   .skeleton {
-    @apply bg-muted/60 rounded-md relative overflow-hidden;
+    @apply bg-muted rounded-md relative overflow-hidden;
   }
   .skeleton::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.6), transparent);
     animation: shimmer 1.4s infinite;
   }
   @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+  /* Government portal top accent strip */
+  .gov-strip {
+    @apply h-1 w-full;
+    background: linear-gradient(to right, hsl(28 100% 50%), hsl(0 0% 100%), hsl(142 71% 36%));
+  }
 }

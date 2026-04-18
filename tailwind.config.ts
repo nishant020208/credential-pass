@@ -8,8 +8,8 @@ export default {
     container: { center: true, padding: "1.5rem", screens: { "2xl": "1320px" } },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
-        mono: ['"JetBrains Mono"', "monospace"],
+        sans: ['"Inter"', "system-ui", "sans-serif"],
+        mono: ['ui-monospace', '"SF Mono"', "Menlo", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

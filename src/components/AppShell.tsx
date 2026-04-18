@@ -8,17 +8,20 @@ export const AppShell = ({ children, nav }: { children: ReactNode; nav?: { to: s
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
+  const roleLabel = profile?.role === "iti_admin" ? "ITI Admin" : profile?.role === "principal" ? "Principal" : profile?.role === "trainer" ? "Trainer" : "";
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border/60 backdrop-blur-md bg-background/70 sticky top-0 z-40">
+    <div className="min-h-screen bg-surface-1">
+      <div className="gov-strip" />
+      <header className="border-b border-border bg-card">
         <div className="container flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="size-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="size-9 rounded-md bg-primary grid place-items-center">
               <ShieldCheck className="size-5 text-primary-foreground" />
             </div>
             <div className="leading-tight">
-              <div className="font-bold tracking-tight">Credify</div>
-              <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Verified Skills</div>
+              <div className="font-semibold tracking-tight text-base">Credify</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Govt. Skill Passport</div>
             </div>
           </Link>
 
@@ -26,7 +29,7 @@ export const AppShell = ({ children, nav }: { children: ReactNode; nav?: { to: s
             <nav className="hidden md:flex items-center gap-1">
               {nav.map(n => (
                 <NavLink key={n.to} to={n.to} end className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-lg text-sm font-medium transition ${isActive ? "bg-surface-2 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-1"}`}>
+                  `px-3 py-1.5 rounded-md text-sm font-medium transition ${isActive ? "bg-primary/10 text-primary" : "text-foreground/70 hover:text-foreground hover:bg-surface-1"}`}>
                   {n.label}
                 </NavLink>
               ))}
@@ -38,19 +41,19 @@ export const AppShell = ({ children, nav }: { children: ReactNode; nav?: { to: s
               <>
                 <div className="text-right hidden sm:block">
                   <div className="text-sm font-medium">{profile.name}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{profile.role.replace("_", " ")}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">{roleLabel}</div>
                 </div>
                 <Button size="icon" variant="ghost" onClick={async () => { await signOut(); navigate("/"); }}>
                   <LogOut className="size-4" />
                 </Button>
               </>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>Sign in</Button>
+              <Button size="sm" variant="default" onClick={() => navigate("/auth")}>Sign in</Button>
             )}
           </div>
         </div>
       </header>
-      <main className="container py-8 animate-fade-up">{children}</main>
+      <main className="container py-8">{children}</main>
     </div>
   );
 };
