@@ -38,6 +38,10 @@ const Index = () => (
       </div>
     </section>
 
+    <section className="mb-8">
+      <QrScanner />
+    </section>
+
     <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       {features.map(f => (
         <div key={f.title} className="bg-card border border-border rounded-lg p-5">
