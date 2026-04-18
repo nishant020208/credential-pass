@@ -62,7 +62,7 @@ const EmployerSearch = () => {
       <header className="border-b border-border bg-card">
         <div className="container py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="size-9 rounded-md bg-primary grid place-items-center"><ShieldCheck className="size-5 text-primary-foreground" /></div>
+            <div className="size-9 shrink-0"><img src="/logo.png" alt="Logo" className="w-full h-full object-contain" /></div>
             <div className="leading-tight">
               <div className="font-semibold">NATIONAL SKILL REGISTRY · Employer Search</div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Public · No login required</div>

@@ -103,8 +103,8 @@ export const AppShell = ({ children }: { children: ReactNode; nav?: NavItem[] })
               <ArrowLeft className="size-4" />
             </Button>
             <div className="flex items-center gap-3 min-w-0">
-              <div className="size-9 sm:size-10 rounded-md bg-primary grid place-items-center shrink-0">
-                <ShieldCheck className="size-5 text-primary-foreground" />
+              <div className="size-9 sm:size-10 shrink-0">
+                <img src="/logo.png" alt="National Skill Registry Logo" className="w-full h-full object-contain" />
               </div>
               <div className="leading-tight min-w-0 hidden xs:block sm:block">
                 <div className="font-bold tracking-tight text-sm sm:text-base truncate">NATIONAL SKILL REGISTRY</div>

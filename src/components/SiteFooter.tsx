@@ -7,8 +7,8 @@ export const SiteFooter = () => (
     <div className="container py-8">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
         <div className="flex items-start gap-3 max-w-md">
-          <div className="size-9 rounded-md bg-primary grid place-items-center shrink-0">
-            <ShieldCheck className="size-5 text-primary-foreground" />
+          <div className="size-9 shrink-0">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="font-semibold text-sm text-foreground">Powered by NATIONAL SKILL REGISTRY</div>

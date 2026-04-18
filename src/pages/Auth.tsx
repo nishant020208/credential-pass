@@ -53,8 +53,8 @@ const Auth = () => {
       <div className="grid place-items-center px-4 py-16">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
-            <div className="size-12 rounded-md bg-primary grid place-items-center mx-auto mb-3">
-              <ShieldCheck className="size-6 text-primary-foreground" />
+            <div className="size-12 shrink-0 mx-auto mb-3">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-xl font-semibold">NATIONAL SKILL REGISTRY</h1>
             <p className="text-xs text-muted-foreground mt-1">Authorised access · Whitelisted users only</p>

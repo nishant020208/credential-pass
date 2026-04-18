@@ -37,8 +37,8 @@ export const SettingsPanel = () => {
 
       <div className="bg-card border border-border rounded-lg p-5">
         <div className="flex items-start gap-3">
-          <div className="size-10 rounded-md bg-primary grid place-items-center shrink-0">
-            <ShieldCheck className="size-5 text-primary-foreground" />
+          <div className="size-10 shrink-0">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div className="min-w-0">
             <div className="font-semibold text-sm">Powered by NATIONAL SKILL REGISTRY</div>
