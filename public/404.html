@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Loading…</title>
+    <script>
+      // SPA fallback: preserve the path + query + hash and redirect to index.
+      (function () {
+        var l = window.location;
+        var redirect = l.pathname + l.search + l.hash;
+        // Use replace so back button works correctly.
+        l.replace(l.origin + "/?spa_redirect=" + encodeURIComponent(redirect));
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
